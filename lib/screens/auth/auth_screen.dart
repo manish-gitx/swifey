@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'components/email_input_component.dart';
 import 'components/otp_verification_component.dart';
+import 'components/profile_setup_component.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -10,7 +11,7 @@ class AuthScreen extends StatefulWidget {
 }
 
 class _AuthScreenState extends State<AuthScreen> {
-  int _currentStep = 0; // 0: Email Input, 1: OTP Verification
+  int _currentStep = 0; // 0: Email Input, 1: OTP Verification, 2: Profile Setup
   String _email = '';
 
   void _handleEmailNext(String email) {
@@ -21,18 +22,31 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   void _handleOTPVerified() {
-    // Navigate to next screen or handle successful verification
-    print('OTP Verified successfully!');
-    // You can navigate to home screen or next onboarding step here
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('OTP Verified Successfully!')));
+    // Move to profile setup step
+    setState(() {
+      _currentStep = 2;
+    });
   }
 
   void _handleBackToEmail() {
     setState(() {
       _currentStep = 0;
     });
+  }
+
+  void _handleBackToOTP() {
+    setState(() {
+      _currentStep = 1;
+    });
+  }
+
+  void _handleProfileSetupComplete() {
+    // Navigate to home screen or next onboarding step
+    print('Profile setup completed!');
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Profile setup completed!')));
+    // You can navigate to home screen here
   }
 
   @override
@@ -95,10 +109,15 @@ class _AuthScreenState extends State<AuthScreen> {
                       padding: const EdgeInsets.only(bottom: 5.0),
                       child: _currentStep == 0
                           ? EmailInputComponent(onNext: _handleEmailNext)
-                          : OTPVerificationComponent(
+                          : _currentStep == 1
+                          ? OTPVerificationComponent(
                               email: _email,
                               onVerified: _handleOTPVerified,
                               onBack: _handleBackToEmail,
+                            )
+                          : ProfileSetupComponent(
+                              onNext: _handleProfileSetupComplete,
+                              onBack: _handleBackToOTP,
                             ),
                     ),
                   ],
