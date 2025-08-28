@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'components/email_input_component.dart';
 import 'components/otp_verification_component.dart';
 import 'components/profile_setup_component.dart';
+import 'components/bio.dart';
+import 'components/pickFlavour.dart' as pick_flavour;
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -11,7 +13,8 @@ class AuthScreen extends StatefulWidget {
 }
 
 class _AuthScreenState extends State<AuthScreen> {
-  int _currentStep = 0; // 0: Email Input, 1: OTP Verification, 2: Profile Setup
+  int _currentStep =
+      0; // 0: Email Input, 1: OTP Verification, 2: Profile Setup, 3: Bio, 4: Pick Flavour, 4: Pick Flavour
   String _email = '';
 
   void _handleEmailNext(String email) {
@@ -41,11 +44,37 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   void _handleProfileSetupComplete() {
+    // Move to bio step
+    setState(() {
+      _currentStep = 3;
+    });
+  }
+
+  void _handleBackToProfile() {
+    setState(() {
+      _currentStep = 2;
+    });
+  }
+
+  void _handleBioComplete(String bio) {
+    // Move to pick flavour step
+    setState(() {
+      _currentStep = 4;
+    });
+  }
+
+  void _handleBackToBio() {
+    setState(() {
+      _currentStep = 3;
+    });
+  }
+
+  void _handlePickFlavourComplete(pick_flavour.Gender selectedGender) {
     // Navigate to home screen or next onboarding step
-    print('Profile setup completed!');
+    print('Gender selected: $selectedGender');
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(const SnackBar(content: Text('Profile setup completed!')));
+    ).showSnackBar(const SnackBar(content: Text('Registration completed!')));
     // You can navigate to home screen here
   }
 
@@ -115,9 +144,19 @@ class _AuthScreenState extends State<AuthScreen> {
                               onVerified: _handleOTPVerified,
                               onBack: _handleBackToEmail,
                             )
-                          : ProfileSetupComponent(
+                          : _currentStep == 2
+                          ? ProfileSetupComponent(
                               onNext: _handleProfileSetupComplete,
                               onBack: _handleBackToOTP,
+                            )
+                          : _currentStep == 3
+                          ? BioInputComponent(
+                              onNext: _handleBioComplete,
+                              onBack: _handleBackToProfile,
+                            )
+                          : pick_flavour.PickFlavourComponent(
+                              onNext: _handlePickFlavourComplete,
+                              onBack: _handleBackToBio,
                             ),
                     ),
                   ],
