@@ -9,10 +9,17 @@ class SwipeScreen extends StatefulWidget {
   State<SwipeScreen> createState() => _SwipeScreenState();
 }
 
-class _SwipeScreenState extends State<SwipeScreen> {
-  late PageController _pageController;
+class _SwipeScreenState extends State<SwipeScreen>
+    with TickerProviderStateMixin {
+  late AnimationController _animationController;
+  late AnimationController _scaleController;
+  late Animation<double> _rotationAnimation;
+  late Animation<double> _translationAnimation;
+  late Animation<double> _scaleAnimation;
+
   int _currentIndex = 0;
-  int _selectedTabIndex = 0;
+  double _dragDistance = 0;
+  bool _isAnimating = false;
 
   // Mock data based on the UI preview
   final List<User> _users = [
@@ -23,7 +30,11 @@ class _SwipeScreenState extends State<SwipeScreen> {
       bio: 'do you accept the mission?',
       location: 'Cambridge',
       gender: 'Female',
-      photos: ['lib/assets/mockdata1.png'],
+      photos: [
+        'lib/assets/mockdata1.png',
+        'lib/assets/pic2.png',
+        'lib/assets/pic3.png',
+      ],
       distance: 1.5,
     ),
     User(
@@ -33,29 +44,104 @@ class _SwipeScreenState extends State<SwipeScreen> {
       bio: 'Adventure seeker and coffee lover ☕',
       location: 'New York',
       gender: 'Female',
-      photos: ['lib/assets/mockdata1.png'],
+      photos: [
+        'lib/assets/pic2.png',
+        'lib/assets/mockdata1.png',
+        'lib/assets/pic3.png',
+      ],
       distance: 2.1,
+    ),
+    User(
+      id: '3',
+      name: 'Sophie',
+      age: 26,
+      bio: 'Artist and dreamer 🎨',
+      location: 'Paris',
+      gender: 'Female',
+      photos: [
+        'lib/assets/pic3.png',
+        'lib/assets/mockdata1.png',
+        'lib/assets/pic2.png',
+      ],
+      distance: 3.2,
+    ),
+    User(
+      id: '4',
+      name: 'Olivia',
+      age: 25,
+      bio: 'Yoga instructor & nature lover 🌿',
+      location: 'Los Angeles',
+      gender: 'Female',
+      photos: [
+        'lib/assets/mockdata1.png',
+        'lib/assets/pic3.png',
+        'lib/assets/pic2.png',
+      ],
+      distance: 4.8,
     ),
   ];
 
   @override
   void initState() {
     super.initState();
-    _pageController = PageController();
+
+    // Initialize animation controllers
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+
+    _scaleController = AnimationController(
+      duration: const Duration(milliseconds: 150),
+      vsync: this,
+    );
+
+    // Initialize animations
+    _rotationAnimation = Tween<double>(begin: 0.0, end: 0.3).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
+    );
+
+    _translationAnimation = Tween<double>(begin: 0.0, end: 300.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
+    );
+
+    _scaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.95,
+    ).animate(CurvedAnimation(parent: _scaleController, curve: Curves.easeOut));
   }
 
   @override
   void dispose() {
-    _pageController.dispose();
+    _animationController.dispose();
+    _scaleController.dispose();
     super.dispose();
   }
 
   void _onSwipeLeft() {
-    _nextUser();
+    if (_isAnimating) return;
+    _animateSwipe(false);
   }
 
   void _onSwipeRight() {
-    _nextUser();
+    if (_isAnimating) return;
+    _animateSwipe(true);
+  }
+
+  void _animateSwipe(bool isLike) {
+    setState(() {
+      _isAnimating = true;
+      _dragDistance = isLike ? 300 : -300;
+    });
+
+    _animationController.forward().then((_) {
+      _nextUser();
+      _animationController.reset();
+      setState(() {
+        _isAnimating = false;
+        _dragDistance = 0;
+      });
+    });
   }
 
   void _nextUser() {
@@ -63,10 +149,11 @@ class _SwipeScreenState extends State<SwipeScreen> {
       setState(() {
         _currentIndex++;
       });
-      _pageController.nextPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
+    } else {
+      // Reset to first user or show end screen
+      setState(() {
+        _currentIndex = 0;
+      });
     }
   }
 
@@ -80,208 +167,356 @@ class _SwipeScreenState extends State<SwipeScreen> {
         systemOverlayStyle: SystemUiOverlayStyle.dark,
         toolbarHeight: 0,
       ),
-      body: SafeArea(
-        child: Column(
+      body: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onHorizontalDragStart: (details) {
+          if (!_isAnimating) {
+            _scaleController.forward();
+          }
+        },
+        onHorizontalDragUpdate: (details) {
+          if (!_isAnimating) {
+            setState(() {
+              _dragDistance += details.delta.dx;
+            });
+          }
+        },
+        onHorizontalDragEnd: (details) {
+          _scaleController.reverse();
+
+          if (!_isAnimating) {
+            if (_dragDistance.abs() > 100) {
+              // Trigger swipe animation
+              _animateSwipe(_dragDistance > 0);
+            } else {
+              // Snap back to center
+              setState(() {
+                _dragDistance = 0;
+              });
+            }
+          }
+        },
+        child: Stack(
           children: [
-            // Main card area
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                child: _buildUserCard(_users[_currentIndex]),
+            // Main content with whole-screen animation
+            AnimatedBuilder(
+              animation: _animationController,
+              builder: (context, child) {
+                final rotation = _isAnimating
+                    ? (_dragDistance > 0
+                        ? _rotationAnimation.value
+                        : -_rotationAnimation.value)
+                    : _dragDistance * 0.0005;
+                final translation = _isAnimating
+                    ? (_dragDistance > 0
+                        ? _translationAnimation.value
+                        : -_translationAnimation.value)
+                    : _dragDistance * 0.5;
+
+                return Transform.translate(
+                  offset: Offset(translation, 0),
+                  child: Transform.rotate(
+                    angle: rotation,
+                    child: AnimatedBuilder(
+                      animation: _scaleAnimation,
+                      builder: (context, inner) {
+                        return Transform.scale(
+                          scale: _scaleAnimation.value,
+                          child: child,
+                        );
+                      },
+                    ),
+                  ),
+                );
+              },
+              child: SafeArea(
+                child: Column(
+                  children: [
+                    // Main card area
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        child: _buildCardStack(),
+                      ),
+                    ),
+
+                    // Bottom section with gender/location info
+                    _buildBottomInfoSection(_users[_currentIndex]),
+
+                    // Action buttons
+                    _buildActionButtons(),
+
+                    // Space for fixed bottom navigation
+                    const SizedBox(height: 80),
+                  ],
+                ),
               ),
             ),
 
-            // Bottom section with gender/location info
-            _buildBottomInfoSection(_users[_currentIndex]),
-
-            // Action buttons
-            _buildActionButtons(),
-
-            // Bottom navigation
-            _buildBottomNavigation(),
+            // Fixed bottom navigation with gesture blocker
+            Positioned(
+              bottom: 12,
+              left: 0,
+              right: 0,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onHorizontalDragStart: (_) {}, // Block horizontal swipes on navigation
+                onHorizontalDragUpdate: (_) {},
+                onHorizontalDragEnd: (_) {},
+                child: _buildBottomNavigation(),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildUserCard(User user) {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: Stack(
-          children: [
-            // Background image
-            Positioned.fill(
-              child: Image.asset(user.photos.first, fit: BoxFit.cover),
-            ),
-
-            // Distance badge (top right)
-            Positioned(
-              top: 16,
-              right: 16,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.6),
-                  borderRadius: BorderRadius.circular(12),
+  Widget _buildCardStack() {
+    return Stack(
+      children: [
+        // Background card (next user)
+        if (_currentIndex + 1 < _users.length)
+          AnimatedBuilder(
+            animation: _scaleAnimation,
+            builder: (context, child) {
+              return Transform.scale(
+                scale: 0.95 + (0.05 * _animationController.value),
+                child: _buildUserCard(
+                  _users[_currentIndex + 1],
+                  isBackground: true,
                 ),
-                child: Text(
-                  '\$${user.distance}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
+              );
+            },
+          ),
+
+  // Front card (current user) - no per-card transform; whole screen animates
+  _buildUserCard(_users[_currentIndex]),
+      ],
+    );
+  }
+
+  Widget _buildUserCard(User user, {bool isBackground = false}) {
+    return Opacity(
+      opacity: isBackground ? 0.8 : 1.0,
+      child: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: Stack(
+            children: [
+              // Background image
+              Positioned.fill(
+                child: Image.asset(
+                  user.photos.first,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      color: Colors.grey[300],
+                      child: const Icon(
+                        Icons.person,
+                        size: 100,
+                        color: Colors.grey,
+                      ),
+                    );
+                  },
+                ),
+              ),
+
+              // Distance badge (top right)
+              Positioned(
+                top: 16,
+                right: 16,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.6),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${user.distance} km',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),
-            ),
 
-            // Small profile picture with book background (bottom left)
-            Positioned(
-              bottom: 140,
-              left: 16,
-              child: Container(
-                width: 49.1944465637207,
-                height: 62.82855987548828,
-                child: Stack(
-                  children: [
-                    // Book background
-                    Container(
-                      width: 49.1944465637207,
-                      height: 62.82855987548828,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(8),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
+              // Small profile picture with book background (bottom left)
+              Positioned(
+                bottom: 140,
+                left: 16,
+                child: SizedBox(
+                  width: 49.19,
+                  height: 62.83,
+                  child: Stack(
+                    children: [
+                      // Book background
+                      Container(
+                        width: 49.19,
+                        height: 62.83,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.2),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.asset(
+                            'lib/assets/book.png',
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                color: Colors.brown[300],
+                                child: const Icon(
+                                  Icons.book,
+                                  color: Colors.white,
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                      // Precisely positioned profile picture
+                      Positioned(
+                        top: 15.96,
+                        left: 11.19,
+                        child: Container(
+                          width: 27.35,
+                          height: 29.86,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.white,
+                              width: 0.76,
+                            ),
+                          ),
+                          child: ClipOval(
+                            child: Image.asset(
+                              user.photos.first,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  color: Colors.grey[400],
+                                  child: const Icon(
+                                    Icons.person,
+                                    color: Colors.white,
+                                    size: 15,
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // User info overlay at bottom
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        Colors.black.withOpacity(0.7),
+                      ],
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Name and age
+                      Text(
+                        '${user.name}, ${user.age}',
+                        style: const TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+
+                      // Bio
+                      Text(
+                        user.bio,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: Colors.white,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+
+                      // Location with icon
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.location_city,
+                                  color: Colors.white,
+                                  size: 14,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  user.location,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.asset(
-                          'lib/assets/book.png',
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                    ),
-                    // Precisely positioned profile picture
-                    Positioned(
-                      top: 15.96,
-                      left: 11.19,
-                      child: Container(
-                        width: 27.353199005126953,
-                        height: 29.85691261291504,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 0.76),
-                        ),
-                        child: ClipOval(
-                          child: Image.asset(
-                            user.photos.first,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // User info overlay at bottom
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Colors.transparent, Colors.black.withOpacity(0.7)],
+                    ],
                   ),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Name and age
-                    Text(
-                      '${user.name}, ${user.age}',
-                      style: const TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-
-                    // Bio
-                    Text(
-                      user.bio,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        color: Colors.white,
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-
-                    // Location with icon
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.location_city,
-                                color: Colors.white,
-                                size: 14,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                user.location,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -289,14 +524,21 @@ class _SwipeScreenState extends State<SwipeScreen> {
 
   Widget _buildBottomInfoSection(User user) {
     return Container(
-      color: const Color(0xFFF5F5F5),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      width: 359,
+      height: 74,
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F5F5),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      padding: const EdgeInsets.all(12),
       child: Row(
         children: [
-          // Gender and Location info
+          // Gender info
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const Text(
                   'Gender',
@@ -319,9 +561,13 @@ class _SwipeScreenState extends State<SwipeScreen> {
             ),
           ),
 
+          const SizedBox(width: 16),
+
+          // Location info
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const Text(
                   'Location',
@@ -333,7 +579,7 @@ class _SwipeScreenState extends State<SwipeScreen> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'New York',
+                  user.location,
                   style: const TextStyle(
                     fontSize: 16,
                     color: Colors.black,
@@ -343,8 +589,6 @@ class _SwipeScreenState extends State<SwipeScreen> {
               ],
             ),
           ),
-
-          // Additional photo
         ],
       ),
     );
@@ -352,7 +596,7 @@ class _SwipeScreenState extends State<SwipeScreen> {
 
   Widget _buildActionButtons() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 80, vertical: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 100, vertical: 20),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -360,8 +604,8 @@ class _SwipeScreenState extends State<SwipeScreen> {
           GestureDetector(
             onTap: _onSwipeLeft,
             child: Container(
-              width: 60,
-              height: 60,
+              width: 72,
+              height: 72,
               decoration: BoxDecoration(
                 color: Colors.white,
                 shape: BoxShape.circle,
@@ -385,8 +629,8 @@ class _SwipeScreenState extends State<SwipeScreen> {
           GestureDetector(
             onTap: _onSwipeRight,
             child: Container(
-              width: 60,
-              height: 60,
+              width: 72,
+              height: 72,
               decoration: BoxDecoration(
                 color: const Color(0xFF8B1E7B),
                 shape: BoxShape.circle,
@@ -417,10 +661,13 @@ class _SwipeScreenState extends State<SwipeScreen> {
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: Colors.white,
         border: Border(
-          top: BorderSide(color: Colors.grey.withOpacity(0.2), width: 0.5),
+          top: BorderSide(
+            color: Color(0x26000000), // #00000026 in Flutter Color format
+            width: 1,
+          ),
         ),
       ),
       child: Row(
