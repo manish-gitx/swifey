@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../utils/onboarding_constants.dart';
 import '../widgets/onboarding_card.dart';
 import '../widgets/page_indicator.dart';
-import 'login.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -33,9 +32,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   void _navigateToLogin() {
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (context) => const LoginScreen()),
-    );
+    Navigator.pushNamed(context, '/login');
   }
 
   @override
@@ -45,7 +42,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         decoration: const BoxDecoration(
           color: Color(0xFF4B164C), // Background color
           image: DecorationImage(
-            image: AssetImage('lib/assets/onboarding.png'),
+            image: AssetImage('lib/assets/onboarding0.png'),
             fit: BoxFit.cover,
           ),
         ),

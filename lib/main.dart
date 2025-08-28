@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'navigation/app_router.dart';
 import 'screens/onboarding_screen.dart';
 
 void main() {
@@ -12,12 +13,19 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Swifey',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF6B1E7B)),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF8B1E7B),
+          primary: const Color(0xFF8B1E7B),
+          secondary: const Color(0xFFF5B3F1),
+        ),
         useMaterial3: true,
+        fontFamily: 'Roboto',
       ),
       home: const OnboardingScreen(),
-      debugShowCheckedModeBanner: false,
+      onGenerateRoute: AppRouter.generateRoute,
+      initialRoute: AppRouter.onboarding,
     );
   }
 }
