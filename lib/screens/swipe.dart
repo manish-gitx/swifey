@@ -148,21 +148,57 @@ class _SwipeScreenState extends State<SwipeScreen> {
               ),
             ),
 
-            // Small profile picture (bottom left)
+            // Small profile picture with book background (bottom left)
             Positioned(
-              bottom: 120,
+              bottom: 140,
               left: 16,
               child: Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.white, width: 2),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(6),
-                  child: Image.asset(user.photos.first, fit: BoxFit.cover),
+                width: 49.1944465637207,
+                height: 62.82855987548828,
+                child: Stack(
+                  children: [
+                    // Book background
+                    Container(
+                      width: 49.1944465637207,
+                      height: 62.82855987548828,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.asset(
+                          'lib/assets/book.png',
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                    // Precisely positioned profile picture
+                    Positioned(
+                      top: 15.96,
+                      left: 11.19,
+                      child: Container(
+                        width: 27.353199005126953,
+                        height: 29.85691261291504,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 0.76),
+                        ),
+                        child: ClipOval(
+                          child: Image.asset(
+                            user.photos.first,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -309,17 +345,6 @@ class _SwipeScreenState extends State<SwipeScreen> {
           ),
 
           // Additional photo
-          Container(
-            width: 60,
-            height: 40,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              image: const DecorationImage(
-                image: AssetImage('lib/assets/mockdata1.png'),
-                fit: BoxFit.cover,
-              ),
-            ),
-          ),
         ],
       ),
     );
