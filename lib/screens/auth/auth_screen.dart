@@ -6,6 +6,7 @@ import 'components/bio.dart';
 import 'components/pickFlavour.dart' as pick_flavour;
 import 'components/permissions.dart';
 import 'components/photo_upload_component.dart';
+import '../../navigation/app_router.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -98,12 +99,8 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   void _handlePhotoUploadComplete() {
-    // Navigate to home screen or next onboarding step
-    print('Photo upload completed!');
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Registration completed!')));
-    // You can navigate to home screen here
+    // Navigate to swipe screen
+    Navigator.pushNamed(context, AppRouter.swipe);
   }
 
   @override

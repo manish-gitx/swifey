@@ -186,7 +186,9 @@ class _PhotoUploadComponentState extends State<PhotoUploadComponent> {
       child: Container(
         width: 84.66667175292969,
         height: 91,
-        padding: hasImage ? EdgeInsets.zero : const EdgeInsets.all(8.0), // No padding when image is uploaded
+        padding: hasImage
+            ? EdgeInsets.zero
+            : const EdgeInsets.all(8.0), // No padding when image is uploaded
         decoration: BoxDecoration(
           color: const Color(0xFFE5E7EB), // Light gray background
           borderRadius: BorderRadius.circular(7.7),
