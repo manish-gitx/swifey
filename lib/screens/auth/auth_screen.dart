@@ -4,6 +4,8 @@ import 'components/otp_verification_component.dart';
 import 'components/profile_setup_component.dart';
 import 'components/bio.dart';
 import 'components/pickFlavour.dart' as pick_flavour;
+import 'components/permissions.dart';
+import 'components/photo_upload_component.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -14,7 +16,7 @@ class AuthScreen extends StatefulWidget {
 
 class _AuthScreenState extends State<AuthScreen> {
   int _currentStep =
-      0; // 0: Email Input, 1: OTP Verification, 2: Profile Setup, 3: Bio, 4: Pick Flavour, 4: Pick Flavour
+      0; // 0: Email Input, 1: OTP Verification, 2: Profile Setup, 3: Bio, 4: Pick Flavour, 5: Permissions, 6: Photo Upload
   String _email = '';
 
   void _handleEmailNext(String email) {
@@ -70,8 +72,34 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   void _handlePickFlavourComplete(pick_flavour.Gender selectedGender) {
+    // Move to permissions step
+    setState(() {
+      _currentStep = 5;
+    });
+  }
+
+  void _handleBackToPickFlavour() {
+    setState(() {
+      _currentStep = 4;
+    });
+  }
+
+  void _handlePermissionsComplete() {
+    // Move to photo upload step
+    setState(() {
+      _currentStep = 6;
+    });
+  }
+
+  void _handleBackToPermissions() {
+    setState(() {
+      _currentStep = 5;
+    });
+  }
+
+  void _handlePhotoUploadComplete() {
     // Navigate to home screen or next onboarding step
-    print('Gender selected: $selectedGender');
+    print('Photo upload completed!');
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text('Registration completed!')));
@@ -154,9 +182,19 @@ class _AuthScreenState extends State<AuthScreen> {
                               onNext: _handleBioComplete,
                               onBack: _handleBackToProfile,
                             )
-                          : pick_flavour.PickFlavourComponent(
+                          : _currentStep == 4
+                          ? pick_flavour.PickFlavourComponent(
                               onNext: _handlePickFlavourComplete,
                               onBack: _handleBackToBio,
+                            )
+                          : _currentStep == 5
+                          ? PermissionsComponent(
+                              onNext: _handlePermissionsComplete,
+                              onBack: _handleBackToPickFlavour,
+                            )
+                          : PhotoUploadComponent(
+                              onNext: _handlePhotoUploadComplete,
+                              onBack: _handleBackToPermissions,
                             ),
                     ),
                   ],
